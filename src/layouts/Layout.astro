@@ -14,10 +14,14 @@ const { title } = Astro.props;
 		<meta name="viewport" content="width=device-width" />
 		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 		<meta name="generator" content={Astro.generator} />
+		<meta	name="author" content="Victor Hernandez" />
+		<meta name="view-transition" content="same-origin" />
 		<title>{title}</title>
 	</head>
 	<body>
-		<slot />
+		<div id="content">
+			<slot />
+		</div>
 	</body>
 </html>
 <style is:global>
@@ -33,4 +37,37 @@ const { title } = Astro.props;
 		font-family: Menlo, Monaco, Lucida Console, Liberation Mono, DejaVu Sans Mono,
 			Bitstream Vera Sans Mono, Courier New, monospace;
 	}
+
+	::view-transition-old(root),
+	::view-transition-new(root) {
+		animation-duration: 0.5s;
+	}
 </style>
+
+<script>
+	//	@ts-expect-error
+	if (document.startViewTransition) {
+		//	@ts-expect-error
+		// eslint-disable-next-line no-undef
+		navigation.addEventListener('navigate', (event) => {
+			const toUrl = new URL(event.destination.url);
+
+			if (location.origin !== toUrl.origin) return;
+
+			event.intercept({
+				async handler () {
+					const	response = await fetch(toUrl.pathname);
+					// get the reponse body as html to query a <main> element
+					const html = await response.text();
+					const doc = new DOMParser().parseFromString(html, 'text/html').querySelector('body');
+					// Use the View Transition API
+					//	@ts-expect-error
+					document.startViewTransition(()	=> {
+						document.body.innerHTML	= doc.innerHTML;
+						document.documentElement.scrollTop = 0;
+					});
+				}
+			})
+		});
+	}
+</script>
